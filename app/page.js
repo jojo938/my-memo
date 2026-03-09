@@ -1,17 +1,11 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
+import { createClient } from "@supabase/supabase-js";
 
-const STORAGE_KEY = "projectjk_memos_v1";
-
-function safeJsonParse(value, fallback) {
-  try {
-    if (!value) return fallback;
-    return JSON.parse(value);
-  } catch {
-    return fallback;
-  }
-}
+const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+const supabase = supabaseUrl && supabaseAnonKey ? createClient(supabaseUrl, supabaseAnonKey) : null;
 
 function pad2(n) {
   return String(n).padStart(2, "0");
@@ -23,8 +17,15 @@ function toDateKey(isoString) {
   return `${d.getFullYear()}-${pad2(d.getMonth() + 1)}-${pad2(d.getDate())}`;
 }
 
-function formatKoreanDateHeading(isoString) {
-  const d = new Date(isoString);
+function dateFromKey(key) {
+  const parts = key.split("-").map((v) => Number(v));
+  if (parts.length !== 3 || parts.some((n) => !Number.isFinite(n))) return null;
+  const [y, m, d] = parts;
+  return new Date(y, m - 1, d);
+}
+
+function formatKoreanDateHeading(input) {
+  const d = input instanceof Date ? input : new Date(input);
   if (Number.isNaN(d.getTime())) return "날짜 정보 없음";
   return new Intl.DateTimeFormat("ko-KR", {
     year: "numeric",
@@ -46,57 +47,74 @@ function formatKoreanDateTime(isoString) {
   }).format(d);
 }
 
-function makeId() {
-  if (typeof crypto !== "undefined" && crypto.randomUUID) return crypto.randomUUID();
-  return `${Date.now()}_${Math.random().toString(16).slice(2)}`;
+function fromRow(row) {
+  if (!row) return null;
+  return {
+    id: row.id,
+    title: row.title ?? "",
+    content: row.content ?? "",
+    createdAt: row.created_at,
+    updatedAt: row.updated_at ?? row.created_at,
+  };
 }
 
-function normalizeMemo(raw) {
-  if (!raw || typeof raw !== "object") return null;
-  const id = typeof raw.id === "string" ? raw.id : makeId();
-  const title = typeof raw.title === "string" ? raw.title : "";
-  const content = typeof raw.content === "string" ? raw.content : "";
-  const createdAt = typeof raw.createdAt === "string" ? raw.createdAt : new Date().toISOString();
-  const updatedAt = typeof raw.updatedAt === "string" ? raw.updatedAt : createdAt;
-  return { id, title, content, createdAt, updatedAt };
-}
-
-function loadMemosFromStorage() {
-  if (typeof window === "undefined") return [];
-  const raw = safeJsonParse(window.localStorage.getItem(STORAGE_KEY), []);
-  if (!Array.isArray(raw)) return [];
-  const memos = raw.map(normalizeMemo).filter(Boolean);
-  return memos;
-}
-
-function saveMemosToStorage(memos) {
-  if (typeof window === "undefined") return;
-  window.localStorage.setItem(STORAGE_KEY, JSON.stringify(memos));
+function getSupabaseErrorMessage(error) {
+  if (!error) return "";
+  if (typeof error === "string") return error;
+  if (typeof error.message === "string") return error.message;
+  return "알 수 없는 오류";
 }
 
 export default function Home() {
-  const [mounted, setMounted] = useState(false);
+  const [loading, setLoading] = useState(true);
+  const [errorMsg, setErrorMsg] = useState("");
   const [memos, setMemos] = useState([]);
   const [query, setQuery] = useState("");
   const [selectedId, setSelectedId] = useState(null);
 
   const [newTitle, setNewTitle] = useState("");
   const [newContent, setNewContent] = useState("");
+  const [creating, setCreating] = useState(false);
 
   const [editTitle, setEditTitle] = useState("");
   const [editContent, setEditContent] = useState("");
+  const [savingEdit, setSavingEdit] = useState(false);
+  const [deletingId, setDeletingId] = useState(null);
+  const [clearing, setClearing] = useState(false);
 
   const newTitleRef = useRef(null);
 
   useEffect(() => {
-    setMemos(loadMemosFromStorage());
-    setMounted(true);
-  }, []);
+    let cancelled = false;
+    async function fetchMemos() {
+      if (!supabase) {
+        setErrorMsg("Supabase 환경변수가 없어요. .env.local의 NEXT_PUBLIC_SUPABASE_URL / KEY를 확인해주세요.");
+        setLoading(false);
+        return;
+      }
 
-  useEffect(() => {
-    if (!mounted) return;
-    saveMemosToStorage(memos);
-  }, [memos, mounted]);
+      setLoading(true);
+      setErrorMsg("");
+      const { data, error } = await supabase
+        .from("memos")
+        .select("id, created_at, title, content, updated_at")
+        .order("created_at", { ascending: false });
+
+      if (cancelled) return;
+      if (error) {
+        setErrorMsg(`불러오기 실패: ${getSupabaseErrorMessage(error)}`);
+        setMemos([]);
+      } else {
+        setMemos((data ?? []).map(fromRow).filter(Boolean));
+      }
+      setLoading(false);
+    }
+
+    fetchMemos();
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   const selectedMemo = useMemo(() => memos.find((m) => m.id === selectedId) ?? null, [memos, selectedId]);
 
@@ -126,71 +144,126 @@ export default function Home() {
     const keys = Array.from(map.keys()).sort((a, b) => (a < b ? 1 : -1));
     return keys.map((key) => ({
       key,
-      heading: key === "invalid" ? "날짜 정보 없음" : formatKoreanDateHeading(`${key}T00:00:00.000Z`),
+      heading: key === "invalid" ? "날짜 정보 없음" : formatKoreanDateHeading(dateFromKey(key) ?? key),
       memos: map.get(key),
     }));
   }, [filteredMemos]);
 
-  function createMemo(e) {
+  async function createMemo(e) {
     e.preventDefault();
     const title = newTitle.trim();
     const content = newContent.trim();
     if (!title && !content) return;
+    if (!supabase) return;
 
     const now = new Date().toISOString();
-    const memo = {
-      id: makeId(),
-      title: title || "제목 없음",
-      content,
-      createdAt: now,
-      updatedAt: now,
-    };
+    setCreating(true);
+    setErrorMsg("");
+    const { data, error } = await supabase
+      .from("memos")
+      .insert({
+        title: title || "제목 없음",
+        content,
+        created_at: now,
+        updated_at: now,
+      })
+      .select("id, created_at, title, content, updated_at")
+      .single();
 
-    setMemos((prev) => [memo, ...prev]);
-    setSelectedId(memo.id);
-    setNewTitle("");
-    setNewContent("");
-    requestAnimationFrame(() => newTitleRef.current?.focus?.());
+    if (error) {
+      setErrorMsg(`저장 실패: ${getSupabaseErrorMessage(error)}`);
+      setCreating(false);
+      return;
+    }
+
+    const memo = fromRow(data);
+    if (memo) {
+      setMemos((prev) => [memo, ...prev]);
+      setSelectedId(memo.id);
+      setNewTitle("");
+      setNewContent("");
+      requestAnimationFrame(() => newTitleRef.current?.focus?.());
+    }
+    setCreating(false);
   }
 
-  function deleteMemo(id) {
+  async function deleteMemo(id) {
+    if (!supabase) return;
     const target = memos.find((m) => m.id === id);
     const name = target?.title ? `“${target.title}”` : "이 메모";
     if (!window.confirm(`${name}를 삭제할까요?\n삭제하면 되돌릴 수 없어요.`)) return;
 
+    setDeletingId(id);
+    setErrorMsg("");
+    const { error } = await supabase.from("memos").delete().eq("id", id);
+    if (error) {
+      setErrorMsg(`삭제 실패: ${getSupabaseErrorMessage(error)}`);
+      setDeletingId(null);
+      return;
+    }
+
     setMemos((prev) => prev.filter((m) => m.id !== id));
     setSelectedId((prev) => (prev === id ? null : prev));
+    setDeletingId(null);
   }
 
   function startEditing(memo) {
     setSelectedId(memo.id);
   }
 
-  function saveEdit() {
+  async function saveEdit() {
     if (!selectedMemo) return;
+    if (!supabase) return;
     const title = editTitle.trim();
     const content = editContent.trim();
+    const now = new Date().toISOString();
 
-    setMemos((prev) =>
-      prev.map((m) => {
-        if (m.id !== selectedMemo.id) return m;
-        const now = new Date().toISOString();
-        return {
-          ...m,
-          title: title || "제목 없음",
-          content,
-          updatedAt: now,
-        };
-      }),
-    );
+    setSavingEdit(true);
+    setErrorMsg("");
+    const { data, error } = await supabase
+      .from("memos")
+      .update({
+        title: title || "제목 없음",
+        content,
+        updated_at: now,
+      })
+      .eq("id", selectedMemo.id)
+      .select("id, created_at, title, content, updated_at")
+      .single();
+
+    if (error) {
+      setErrorMsg(`수정 저장 실패: ${getSupabaseErrorMessage(error)}`);
+      setSavingEdit(false);
+      return;
+    }
+
+    const updated = fromRow(data);
+    if (updated) {
+      setMemos((prev) => prev.map((m) => (m.id === updated.id ? updated : m)));
+    }
+    setSavingEdit(false);
   }
 
-  function clearAll() {
+  async function clearAll() {
     if (memos.length === 0) return;
+    if (!supabase) return;
     if (!window.confirm("전체 메모를 삭제할까요?\n삭제하면 되돌릴 수 없어요.")) return;
+
+    setClearing(true);
+    setErrorMsg("");
+    const ids = memos.map((m) => m.id).filter(Boolean);
+    const { error } = ids.length ? await supabase.from("memos").delete().in("id", ids) : { error: null };
+
+    if (error) {
+      setErrorMsg(`전체 삭제 실패: ${getSupabaseErrorMessage(error)}`);
+      setClearing(false);
+      return;
+    }
+
     setMemos([]);
     setSelectedId(null);
     setQuery("");
+    setClearing(false);
   }
 
   return (
@@ -201,9 +274,9 @@ export default function Home() {
             <div className="flex flex-col">
               <h1 className="text-2xl font-semibold tracking-tight">메모장</h1>
               <p className="text-sm text-zinc-600 dark:text-zinc-400">
-                {mounted ? (
+                {!loading ? (
                   <>
-                    메모 {memos.length.toLocaleString("ko-KR")}개 · localStorage에 자동 저장돼요
+                    메모 {memos.length.toLocaleString("ko-KR")}개 · Supabase에 저장돼요
                   </>
                 ) : (
                   <>불러오는 중…</>
@@ -228,13 +301,19 @@ export default function Home() {
               <button
                 type="button"
                 onClick={clearAll}
-                disabled={memos.length === 0}
+                disabled={memos.length === 0 || clearing}
                 className="inline-flex h-10 items-center justify-center rounded-full border border-zinc-200 bg-white px-4 text-sm font-medium text-red-600 shadow-sm transition hover:bg-zinc-50 disabled:opacity-50 dark:border-white/10 dark:bg-zinc-950 dark:hover:bg-zinc-900"
               >
-                전체 삭제
+                {clearing ? "삭제 중…" : "전체 삭제"}
               </button>
             </div>
           </div>
+
+          {errorMsg ? (
+            <div className="rounded-2xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-800 dark:border-red-500/30 dark:bg-red-500/10 dark:text-red-200">
+              {errorMsg}
+            </div>
+          ) : null}
 
           <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
             <div className="relative w-full sm:max-w-md">
@@ -281,13 +360,14 @@ export default function Home() {
               />
               <div className="flex items-center justify-between gap-2">
                 <div className="text-xs text-zinc-500 dark:text-zinc-400">
-                  {mounted ? "저장: 자동" : "저장: 대기"}
+                  {loading ? "상태: 불러오는 중" : "저장: Supabase"}
                 </div>
                 <button
                   type="submit"
-                  className="inline-flex h-10 items-center justify-center rounded-full bg-zinc-950 px-4 text-sm font-semibold text-white shadow-sm transition hover:bg-zinc-800 dark:bg-white dark:text-zinc-950 dark:hover:bg-zinc-200"
+                  disabled={creating}
+                  className="inline-flex h-10 items-center justify-center rounded-full bg-zinc-950 px-4 text-sm font-semibold text-white shadow-sm transition hover:bg-zinc-800 disabled:opacity-50 dark:bg-white dark:text-zinc-950 dark:hover:bg-zinc-200"
                 >
-                  저장
+                  {creating ? "저장 중…" : "저장"}
                 </button>
               </div>
             </form>
@@ -395,9 +475,10 @@ export default function Home() {
                       <button
                         type="button"
                         onClick={() => deleteMemo(selectedMemo.id)}
+                        disabled={deletingId === selectedMemo.id}
                         className="inline-flex h-9 items-center justify-center rounded-full border border-zinc-200 bg-white px-3 text-sm font-semibold text-red-600 shadow-sm transition hover:bg-zinc-50 dark:border-white/10 dark:bg-zinc-950 dark:hover:bg-zinc-900"
                       >
-                        삭제
+                        {deletingId === selectedMemo.id ? "삭제 중…" : "삭제"}
                       </button>
                     </div>
 
@@ -432,9 +513,10 @@ export default function Home() {
                       <button
                         type="button"
                         onClick={saveEdit}
-                        className="inline-flex h-10 items-center justify-center rounded-full bg-zinc-950 px-4 text-sm font-semibold text-white shadow-sm transition hover:bg-zinc-800 dark:bg-white dark:text-zinc-950 dark:hover:bg-zinc-200"
+                        disabled={savingEdit}
+                        className="inline-flex h-10 items-center justify-center rounded-full bg-zinc-950 px-4 text-sm font-semibold text-white shadow-sm transition hover:bg-zinc-800 disabled:opacity-50 dark:bg-white dark:text-zinc-950 dark:hover:bg-zinc-200"
                       >
-                        수정 저장
+                        {savingEdit ? "저장 중…" : "수정 저장"}
                       </button>
                     </div>
                   </div>
@@ -445,7 +527,7 @@ export default function Home() {
         </div>
 
         <footer className="pt-2 text-xs text-zinc-500 dark:text-zinc-400">
-          팁: 브라우저 저장소(localStorage)를 사용하므로, 같은 브라우저/기기에서만 유지돼요.
+          팁: Supabase에 저장되므로, 같은 계정/정책(RLS)에 따라 여러 기기에서도 동일하게 볼 수 있어요.
         </footer>
       </div>
     </div>

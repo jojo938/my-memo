@@ -67,7 +67,9 @@ function getSupabaseErrorMessage(error) {
 
 export default function Home() {
   const [loading, setLoading] = useState(true);
+  const [authLoading, setAuthLoading] = useState(true);
   const [errorMsg, setErrorMsg] = useState("");
+  const [user, setUser] = useState(null);
   const [memos, setMemos] = useState([]);
   const [query, setQuery] = useState("");
   const [selectedId, setSelectedId] = useState(null);
@@ -85,10 +87,53 @@ export default function Home() {
   const newTitleRef = useRef(null);
 
   useEffect(() => {
+    if (!supabase) {
+      setErrorMsg("Supabase 환경변수가 없어요. .env.local의 NEXT_PUBLIC_SUPABASE_URL / KEY를 확인해주세요.");
+      setAuthLoading(false);
+      setLoading(false);
+      return;
+    }
+
     let cancelled = false;
+
+    async function fetchUser() {
+      setAuthLoading(true);
+      const {
+        data: { user },
+        error,
+      } = await supabase.auth.getUser();
+
+      if (cancelled) return;
+
+      if (error) {
+        setErrorMsg(`인증 상태 확인 실패: ${getSupabaseErrorMessage(error)}`);
+      }
+
+      setUser(user ?? null);
+      setAuthLoading(false);
+    }
+
+    fetchUser();
+
+    const {
+      data: { subscription },
+    } = supabase.auth.onAuthStateChange((_event, session) => {
+      setUser(session?.user ?? null);
+    });
+
+    return () => {
+      cancelled = true;
+      subscription.unsubscribe();
+    };
+  }, []);
+
+  useEffect(() => {
+    let cancelled = false;
+
     async function fetchMemos() {
-      if (!supabase) {
-        setErrorMsg("Supabase 환경변수가 없어요. .env.local의 NEXT_PUBLIC_SUPABASE_URL / KEY를 확인해주세요.");
+      if (!supabase) return;
+      if (!user) {
+        setMemos([]);
         setLoading(false);
         return;
       }
@@ -97,7 +142,8 @@ export default function Home() {
       setErrorMsg("");
       const { data, error } = await supabase
         .from("memos")
-        .select("id, created_at, title, content, updated_at")
+        .select("id, created_at, title, content, updated_at, user_id")
+        .eq("user_id", user.id)
         .order("created_at", { ascending: false });
 
       if (cancelled) return;
@@ -114,7 +160,7 @@ export default function Home() {
     return () => {
       cancelled = true;
     };
-  }, []);
+  }, [user]);
 
   const selectedMemo = useMemo(() => memos.find((m) => m.id === selectedId) ?? null, [memos, selectedId]);
 
@@ -155,6 +201,10 @@ export default function Home() {
     const content = newContent.trim();
     if (!title && !content) return;
     if (!supabase) return;
+    if (!user) {
+      setErrorMsg("로그인한 사용자 정보가 없어 메모를 저장할 수 없어요.");
+      return;
+    }
 
     const now = new Date().toISOString();
     setCreating(true);
@@ -164,10 +214,11 @@ export default function Home() {
       .insert({
         title: title || "제목 없음",
         content,
+        user_id: user.id,
         created_at: now,
         updated_at: now,
       })
-      .select("id, created_at, title, content, updated_at")
+      .select("id, created_at, title, content, updated_at, user_id")
       .single();
 
     if (error) {
@@ -185,6 +236,33 @@ export default function Home() {
       requestAnimationFrame(() => newTitleRef.current?.focus?.());
     }
     setCreating(false);
+  }
+
+  async function signInWithGoogle() {
+    if (!supabase) return;
+    setErrorMsg("");
+    const { error } = await supabase.auth.signInWithOAuth({
+      provider: "google",
+      options: {
+        redirectTo: "https://josephk.app",
+      },
+    });
+    if (error) {
+      setErrorMsg(`로그인 실패: ${getSupabaseErrorMessage(error)}`);
+    }
+  }
+
+  async function signOut() {
+    if (!supabase) return;
+    setErrorMsg("");
+    const { error } = await supabase.auth.signOut();
+    if (error) {
+      setErrorMsg(`로그아웃 실패: ${getSupabaseErrorMessage(error)}`);
+      return;
+    }
+    setMemos([]);
+    setSelectedId(null);
+    setQuery("");
   }
 
   async function deleteMemo(id) {
@@ -284,29 +362,57 @@ export default function Home() {
               </p>
             </div>
 
-            <div className="flex items-center gap-2">
-              <button
-                type="button"
-                onClick={() => {
-                  setSelectedId(null);
-                  setQuery("");
-                  setNewTitle("");
-                  setNewContent("");
-                  requestAnimationFrame(() => newTitleRef.current?.focus?.());
-                }}
-                className="inline-flex h-10 items-center justify-center rounded-full border border-zinc-200 bg-white px-4 text-sm font-medium text-zinc-950 shadow-sm transition hover:bg-zinc-50 dark:border-white/10 dark:bg-zinc-950 dark:text-zinc-50 dark:hover:bg-zinc-900"
-              >
-                새 메모
-              </button>
-              <button
-                type="button"
-                onClick={clearAll}
-                disabled={memos.length === 0 || clearing}
-                className="inline-flex h-10 items-center justify-center rounded-full border border-zinc-200 bg-white px-4 text-sm font-medium text-red-600 shadow-sm transition hover:bg-zinc-50 disabled:opacity-50 dark:border-white/10 dark:bg-zinc-950 dark:hover:bg-zinc-900"
-              >
-                {clearing ? "삭제 중…" : "전체 삭제"}
-              </button>
-            </div>
+            {user ? (
+              <div className="flex items-center gap-3">
+                <div className="flex flex-col items-end">
+                  <span className="max-w-[180px] truncate text-xs font-medium text-zinc-800 dark:text-zinc-100">
+                    {user.email || user.user_metadata?.full_name || "로그인됨"}
+                  </span>
+                  <span className="text-[11px] text-zinc-500 dark:text-zinc-400">Google 계정</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setSelectedId(null);
+                      setQuery("");
+                      setNewTitle("");
+                      setNewContent("");
+                      requestAnimationFrame(() => newTitleRef.current?.focus?.());
+                    }}
+                    className="inline-flex h-10 items-center justify-center rounded-full border border-zinc-200 bg-white px-4 text-sm font-medium text-zinc-950 shadow-sm transition hover:bg-zinc-50 dark:border-white/10 dark:bg-zinc-950 dark:text-zinc-50 dark:hover:bg-zinc-900"
+                  >
+                    새 메모
+                  </button>
+                  <button
+                    type="button"
+                    onClick={clearAll}
+                    disabled={memos.length === 0 || clearing}
+                    className="inline-flex h-10 items-center justify-center rounded-full border border-zinc-200 bg-white px-4 text-sm font-medium text-red-600 shadow-sm transition hover:bg-zinc-50 disabled:opacity-50 dark:border-white/10 dark:bg-zinc-950 dark:hover:bg-zinc-900"
+                  >
+                    {clearing ? "삭제 중…" : "전체 삭제"}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={signOut}
+                    className="inline-flex h-10 items-center justify-center rounded-full border border-zinc-200 bg-white px-3 text-xs font-medium text-zinc-700 shadow-sm transition hover:bg-zinc-50 dark:border-white/10 dark:bg-zinc-950 dark:text-zinc-200 dark:hover:bg-zinc-900"
+                  >
+                    로그아웃
+                  </button>
+                </div>
+              </div>
+            ) : (
+              <div className="flex items-center gap-2">
+                <button
+                  type="button"
+                  onClick={signInWithGoogle}
+                  disabled={authLoading || !supabase}
+                  className="inline-flex h-10 items-center justify-center rounded-full bg-white px-4 text-sm font-semibold text-zinc-900 shadow-sm ring-1 ring-zinc-200 transition hover:bg-zinc-50 disabled:opacity-60 dark:bg-zinc-950 dark:text-zinc-50 dark:ring-white/10 dark:hover:bg-zinc-900"
+                >
+                  {authLoading ? "로그인 상태 확인 중…" : "Google로 로그인"}
+                </button>
+              </div>
+            )}
           </div>
 
           {errorMsg ? (
@@ -340,7 +446,25 @@ export default function Home() {
           </div>
         </header>
 
-        <div className="grid gap-6 lg:grid-cols-[380px_1fr]">
+        {!user ? (
+          <main className="mt-8 flex flex-1 items-center justify-center">
+            <div className="w-full max-w-md rounded-3xl border border-zinc-200 bg-white p-8 text-center shadow-sm dark:border-white/10 dark:bg-zinc-950">
+              <h2 className="text-lg font-semibold text-zinc-900 dark:text-zinc-50">로그인이 필요해요</h2>
+              <p className="mt-2 text-sm text-zinc-600 dark:text-zinc-400">
+                Google 계정으로 로그인하면 메모를 Supabase에 안전하게 저장하고, 여러 기기에서 동일하게 볼 수 있어요.
+              </p>
+              <button
+                type="button"
+                onClick={signInWithGoogle}
+                disabled={authLoading || !supabase}
+                className="mt-6 inline-flex h-11 items-center justify-center rounded-full bg-zinc-950 px-5 text-sm font-semibold text-white shadow-sm transition hover:bg-zinc-800 disabled:opacity-60 dark:bg-white dark:text-zinc-950 dark:hover:bg-zinc-200"
+              >
+                {authLoading ? "로그인 상태 확인 중…" : "Google로 로그인"}
+              </button>
+            </div>
+          </main>
+        ) : (
+          <div className="grid gap-6 lg:grid-cols-[380px_1fr]">
           <section className="rounded-3xl border border-zinc-200 bg-white p-4 shadow-sm dark:border-white/10 dark:bg-zinc-950">
             <h2 className="mb-3 text-sm font-semibold text-zinc-900 dark:text-zinc-100">메모 작성</h2>
             <form onSubmit={createMemo} className="flex flex-col gap-3">
@@ -525,6 +649,7 @@ export default function Home() {
             </div>
           </section>
         </div>
+        )}
 
         <footer className="pt-2 text-xs text-zinc-500 dark:text-zinc-400">
           팁: Supabase에 저장되므로, 같은 계정/정책(RLS)에 따라 여러 기기에서도 동일하게 볼 수 있어요.

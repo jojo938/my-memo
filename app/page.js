@@ -55,7 +55,64 @@ function fromRow(row) {
     content: row.content ?? "",
     createdAt: row.created_at,
     updatedAt: row.updated_at ?? row.created_at,
+    mediaUrl: row.media_url ?? null,
   };
+}
+
+function isVideoUrl(url) {
+  if (!url) return false;
+  const lower = url.toLowerCase().split("?")[0];
+  return lower.endsWith(".mp4");
+}
+
+function resizeImageToMax1200(file) {
+  return new Promise((resolve, reject) => {
+    const img = new Image();
+    const url = URL.createObjectURL(file);
+
+    img.onload = () => {
+      try {
+        const maxSize = 1200;
+        let { width, height } = img;
+        const scale = Math.min(1, maxSize / Math.max(width, height));
+        width = Math.round(width * scale);
+        height = Math.round(height * scale);
+
+        const canvas = document.createElement("canvas");
+        canvas.width = width;
+        canvas.height = height;
+        const ctx = canvas.getContext("2d");
+        if (!ctx) {
+          URL.revokeObjectURL(url);
+          reject(new Error("이미지 컨텍스트를 만들 수 없어요."));
+          return;
+        }
+        ctx.drawImage(img, 0, 0, width, height);
+        canvas.toBlob(
+          (blob) => {
+            URL.revokeObjectURL(url);
+            if (!blob) {
+              reject(new Error("이미지를 변환하는 데 실패했어요."));
+              return;
+            }
+            resolve(blob);
+          },
+          "image/jpeg",
+          0.8,
+        );
+      } catch (err) {
+        URL.revokeObjectURL(url);
+        reject(err);
+      }
+    };
+
+    img.onerror = () => {
+      URL.revokeObjectURL(url);
+      reject(new Error("이미지를 불러오는 데 실패했어요."));
+    };
+
+    img.src = url;
+  });
 }
 
 function getSupabaseErrorMessage(error) {
@@ -77,6 +134,7 @@ export default function Home() {
   const [newTitle, setNewTitle] = useState("");
   const [newContent, setNewContent] = useState("");
   const [creating, setCreating] = useState(false);
+   const [selectedFile, setSelectedFile] = useState(null);
 
   const [editTitle, setEditTitle] = useState("");
   const [editContent, setEditContent] = useState("");
@@ -142,7 +200,7 @@ export default function Home() {
       setErrorMsg("");
       const { data, error } = await supabase
         .from("memos")
-        .select("id, created_at, title, content, updated_at, user_id")
+        .select("id, created_at, title, content, updated_at, user_id, media_url")
         .eq("user_id", user.id)
         .order("created_at", { ascending: false });
 
@@ -209,6 +267,57 @@ export default function Home() {
     const now = new Date().toISOString();
     setCreating(true);
     setErrorMsg("");
+
+    let mediaUrl = null;
+    if (selectedFile) {
+      const file = selectedFile;
+      const mime = file.type || "";
+      const isImage = mime.startsWith("image/");
+      const isGif = isImage && mime === "image/gif";
+      const isMp4 = mime === "video/mp4";
+      if (!isImage && !isMp4) {
+        setErrorMsg("이미지 또는 MP4 파일만 첨부할 수 있어요.");
+        setCreating(false);
+        return;
+      }
+
+      try {
+        let uploadBlob = file;
+        let contentType = mime || "application/octet-stream";
+        let ext = (file.name || "").toLowerCase().split(".").pop() || "bin";
+
+        if (isImage && !isGif) {
+          uploadBlob = await resizeImageToMax1200(file);
+          contentType = "image/jpeg";
+          ext = "jpg";
+        }
+
+        const originalName = (file.name || "media").toLowerCase();
+        const baseName = originalName.replace(/\.[^.]+$/, "").replace(/[^a-z0-9-_]/g, "_") || "media";
+        const timestamp = Date.now();
+        const path = `${user.id}/${timestamp}_${baseName}.${ext}`;
+
+        const { error: uploadError } = await supabase.storage.from("memo-media").upload(path, uploadBlob, {
+          cacheControl: "3600",
+          contentType,
+          upsert: false,
+        });
+
+        if (uploadError) {
+          setErrorMsg(`파일 업로드 실패: ${getSupabaseErrorMessage(uploadError)}`);
+          setCreating(false);
+          return;
+        }
+
+        const { data: urlData } = supabase.storage.from("memo-media").getPublicUrl(path);
+        mediaUrl = urlData?.publicUrl || null;
+      } catch (err) {
+        setErrorMsg(err.message || "파일 업로드 중 오류가 발생했어요.");
+        setCreating(false);
+        return;
+      }
+    }
+
     const { data, error } = await supabase
       .from("memos")
       .insert({
@@ -217,8 +326,9 @@ export default function Home() {
         user_id: user.id,
         created_at: now,
         updated_at: now,
+        media_url: mediaUrl,
       })
-      .select("id, created_at, title, content, updated_at, user_id")
+      .select("id, created_at, title, content, updated_at, user_id, media_url")
       .single();
 
     if (error) {
@@ -233,9 +343,29 @@ export default function Home() {
       setSelectedId(memo.id);
       setNewTitle("");
       setNewContent("");
+      setSelectedFile(null);
       requestAnimationFrame(() => newTitleRef.current?.focus?.());
     }
     setCreating(false);
+  }
+
+  async function handleFileChange(e) {
+    const file = e.target.files?.[0];
+    // 디버깅용 로그: 파일 선택 여부 확인
+    console.log("handleFileChange 호출됨, 선택된 파일:", file);
+    if (!file) return;
+    const mime = file.type || "";
+    const isImage = mime.startsWith("image/");
+    const isGif = isImage && mime === "image/gif";
+    const isMp4 = mime === "video/mp4";
+    if (!isImage && !isMp4) {
+      setErrorMsg("이미지 또는 MP4 파일만 첨부할 수 있어요.");
+      setSelectedFile(null);
+      return;
+    }
+
+    setErrorMsg("");
+    setSelectedFile(file);
   }
 
   async function signInWithGoogle() {
@@ -482,17 +612,28 @@ export default function Home() {
                 rows={8}
                 className="w-full resize-none rounded-2xl border border-zinc-200 bg-white px-4 py-3 text-sm leading-6 outline-none transition placeholder:text-zinc-400 focus:border-zinc-300 dark:border-white/10 dark:bg-zinc-950 dark:placeholder:text-zinc-500 dark:focus:border-white/20"
               />
-              <div className="flex items-center justify-between gap-2">
+              <div className="flex items-center justify-between gap-3">
                 <div className="text-xs text-zinc-500 dark:text-zinc-400">
                   {loading ? "상태: 불러오는 중" : "저장: Supabase"}
                 </div>
-                <button
-                  type="submit"
-                  disabled={creating}
-                  className="inline-flex h-10 items-center justify-center rounded-full bg-zinc-950 px-4 text-sm font-semibold text-white shadow-sm transition hover:bg-zinc-800 disabled:opacity-50 dark:bg-white dark:text-zinc-950 dark:hover:bg-zinc-200"
-                >
-                  {creating ? "저장 중…" : "저장"}
-                </button>
+                <div className="flex items-center gap-2">
+                  <label className="inline-flex cursor-pointer items-center justify-center rounded-full border border-zinc-300 px-3 py-1.5 text-xs font-medium text-zinc-700 shadow-sm transition hover:border-zinc-400 hover:bg-zinc-50 dark:border-white/20 dark:text-zinc-100 dark:hover:border-white/40 dark:hover:bg-zinc-900">
+                    <span>파일 첨부</span>
+                    <input
+                      type="file"
+                      accept="image/*,video/mp4"
+                      onChange={handleFileChange}
+                      className="hidden"
+                    />
+                  </label>
+                  <button
+                    type="submit"
+                    disabled={creating}
+                    className="inline-flex h-10 items-center justify-center rounded-full bg-zinc-950 px-4 text-sm font-semibold text-white shadow-sm transition hover:bg-zinc-800 disabled:opacity-50 dark:bg-white dark:text-zinc-950 dark:hover:bg-zinc-200"
+                  >
+                    {creating ? "저장 중…" : "저장"}
+                  </button>
+                </div>
               </div>
             </form>
           </section>
@@ -623,6 +764,23 @@ export default function Home() {
                         rows={10}
                         className="w-full flex-1 resize-none rounded-2xl border border-zinc-200 bg-white px-4 py-3 text-sm leading-6 outline-none transition focus:border-zinc-300 dark:border-white/10 dark:bg-zinc-950 dark:focus:border-white/20"
                       />
+                      {selectedMemo.mediaUrl ? (
+                        <div className="mt-3">
+                          {isVideoUrl(selectedMemo.mediaUrl) ? (
+                            <video
+                              src={selectedMemo.mediaUrl}
+                              controls
+                              className="h-auto max-h-96 w-full max-w-full rounded-2xl object-contain"
+                            />
+                          ) : (
+                            <img
+                              src={selectedMemo.mediaUrl}
+                              alt=""
+                              className="h-auto max-h-96 w-full max-w-full rounded-2xl object-contain"
+                            />
+                          )}
+                        </div>
+                      ) : null}
                     </div>
 
                     <div className="flex flex-wrap items-center justify-between gap-2 pt-1">

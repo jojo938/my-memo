@@ -475,13 +475,13 @@ export default function Home() {
   }
 
   return (
-    <div className="min-h-screen bg-zinc-50 font-sans text-zinc-950 dark:bg-black dark:text-zinc-50">
+    <div className="min-h-screen overflow-x-hidden bg-zinc-50 font-sans text-zinc-950 dark:bg-black dark:text-zinc-50">
       <div className="mx-auto flex w-full max-w-6xl flex-col gap-6 px-4 py-8 sm:px-6 lg:px-8">
         <header className="flex flex-col gap-3">
-          <div className="flex flex-wrap items-center justify-between gap-3">
-            <div className="flex flex-col">
-              <h1 className="text-2xl font-semibold tracking-tight">메모장</h1>
-              <p className="text-sm text-zinc-600 dark:text-zinc-400">
+          <div className="flex min-w-0 flex-wrap items-center justify-between gap-3">
+            <div className="min-w-0 flex-1 basis-0 sm:basis-auto">
+              <h1 className="truncate text-xl font-semibold tracking-tight sm:text-2xl">메모장</h1>
+              <p className="truncate text-xs text-zinc-600 dark:text-zinc-400 sm:text-sm">
                 {!loading ? (
                   <>
                     메모 {memos.length.toLocaleString("ko-KR")}개 · Supabase에 저장돼요
@@ -493,14 +493,14 @@ export default function Home() {
             </div>
 
             {user ? (
-              <div className="flex items-center gap-3">
-                <div className="flex flex-col items-end">
-                  <span className="max-w-[180px] truncate text-xs font-medium text-zinc-800 dark:text-zinc-100">
+              <div className="flex min-w-0 flex-1 flex-col items-stretch gap-2 sm:flex-row sm:flex-initial sm:items-center sm:gap-3">
+                <div className="hidden min-w-0 shrink-0 flex-col items-end sm:flex">
+                  <span className="max-w-[140px] truncate text-xs font-medium text-zinc-800 dark:text-zinc-100 md:max-w-[180px]">
                     {user.email || user.user_metadata?.full_name || "로그인됨"}
                   </span>
                   <span className="text-[11px] text-zinc-500 dark:text-zinc-400">Google 계정</span>
                 </div>
-                <div className="flex items-center gap-2">
+                <div className="flex flex-wrap items-center justify-end gap-1.5 sm:gap-2">
                   <button
                     type="button"
                     onClick={() => {
@@ -510,7 +510,7 @@ export default function Home() {
                       setNewContent("");
                       requestAnimationFrame(() => newTitleRef.current?.focus?.());
                     }}
-                    className="inline-flex h-10 items-center justify-center rounded-full border border-zinc-200 bg-white px-4 text-sm font-medium text-zinc-950 shadow-sm transition hover:bg-zinc-50 dark:border-white/10 dark:bg-zinc-950 dark:text-zinc-50 dark:hover:bg-zinc-900"
+                    className="inline-flex h-9 min-w-0 shrink-0 items-center justify-center rounded-full border border-zinc-200 bg-white px-2.5 py-1.5 text-[11px] font-medium text-zinc-950 shadow-sm transition hover:bg-zinc-50 sm:h-10 sm:px-4 sm:text-sm dark:border-white/10 dark:bg-zinc-950 dark:text-zinc-50 dark:hover:bg-zinc-900"
                   >
                     새 메모
                   </button>
@@ -518,28 +518,28 @@ export default function Home() {
                     type="button"
                     onClick={clearAll}
                     disabled={memos.length === 0 || clearing}
-                    className="inline-flex h-10 items-center justify-center rounded-full border border-zinc-200 bg-white px-4 text-sm font-medium text-red-600 shadow-sm transition hover:bg-zinc-50 disabled:opacity-50 dark:border-white/10 dark:bg-zinc-950 dark:hover:bg-zinc-900"
+                    className="inline-flex h-9 min-w-0 shrink-0 items-center justify-center rounded-full border border-zinc-200 bg-white px-2.5 py-1.5 text-[11px] font-medium text-red-600 shadow-sm transition hover:bg-zinc-50 disabled:opacity-50 sm:h-10 sm:px-4 sm:text-sm dark:border-white/10 dark:bg-zinc-950 dark:hover:bg-zinc-900"
                   >
                     {clearing ? "삭제 중…" : "전체 삭제"}
                   </button>
                   <button
                     type="button"
                     onClick={signOut}
-                    className="inline-flex h-10 items-center justify-center rounded-full border border-zinc-200 bg-white px-3 text-xs font-medium text-zinc-700 shadow-sm transition hover:bg-zinc-50 dark:border-white/10 dark:bg-zinc-950 dark:text-zinc-200 dark:hover:bg-zinc-900"
+                    className="inline-flex h-9 min-w-0 shrink-0 items-center justify-center rounded-full border border-zinc-200 bg-white px-2.5 py-1.5 text-[11px] font-medium text-zinc-700 shadow-sm transition hover:bg-zinc-50 sm:h-10 sm:px-3 sm:text-xs dark:border-white/10 dark:bg-zinc-950 dark:text-zinc-200 dark:hover:bg-zinc-900"
                   >
                     로그아웃
                   </button>
                 </div>
               </div>
             ) : (
-              <div className="flex items-center gap-2">
+              <div className="flex min-w-0 shrink-0 items-center justify-end">
                 <button
                   type="button"
                   onClick={signInWithGoogle}
                   disabled={authLoading || !supabase}
-                  className="inline-flex h-10 items-center justify-center rounded-full bg-white px-4 text-sm font-semibold text-zinc-900 shadow-sm ring-1 ring-zinc-200 transition hover:bg-zinc-50 disabled:opacity-60 dark:bg-zinc-950 dark:text-zinc-50 dark:ring-white/10 dark:hover:bg-zinc-900"
+                  className="inline-flex h-9 min-w-0 items-center justify-center rounded-full bg-white px-3 text-xs font-semibold text-zinc-900 shadow-sm ring-1 ring-zinc-200 transition hover:bg-zinc-50 disabled:opacity-60 sm:h-10 sm:px-4 sm:text-sm dark:bg-zinc-950 dark:text-zinc-50 dark:ring-white/10 dark:hover:bg-zinc-900"
                 >
-                  {authLoading ? "로그인 상태 확인 중…" : "Google로 로그인"}
+                  {authLoading ? "확인 중…" : "Google 로그인"}
                 </button>
               </div>
             )}
@@ -594,8 +594,8 @@ export default function Home() {
             </div>
           </main>
         ) : (
-          <div className="grid gap-6 lg:grid-cols-[380px_1fr]">
-          <section className="rounded-3xl border border-zinc-200 bg-white p-4 shadow-sm dark:border-white/10 dark:bg-zinc-950">
+          <div className="grid min-w-0 gap-6 lg:grid-cols-[380px_1fr]">
+          <section className="min-w-0 rounded-3xl border border-zinc-200 bg-white p-4 shadow-sm dark:border-white/10 dark:bg-zinc-950">
             <h2 className="mb-3 text-sm font-semibold text-zinc-900 dark:text-zinc-100">메모 작성</h2>
             <form onSubmit={createMemo} className="flex flex-col gap-3">
               <input
@@ -612,12 +612,12 @@ export default function Home() {
                 rows={8}
                 className="w-full resize-none rounded-2xl border border-zinc-200 bg-white px-4 py-3 text-sm leading-6 outline-none transition placeholder:text-zinc-400 focus:border-zinc-300 dark:border-white/10 dark:bg-zinc-950 dark:placeholder:text-zinc-500 dark:focus:border-white/20"
               />
-              <div className="flex items-center justify-between gap-3">
-                <div className="text-xs text-zinc-500 dark:text-zinc-400">
-                  {loading ? "상태: 불러오는 중" : "저장: Supabase"}
+              <div className="flex min-w-0 flex-wrap items-center justify-between gap-2">
+                <div className="shrink-0 text-[11px] text-zinc-500 dark:text-zinc-400 sm:text-xs">
+                  {loading ? "불러오는 중" : "저장: Supabase"}
                 </div>
-                <div className="flex items-center gap-2">
-                  <label className="inline-flex cursor-pointer items-center justify-center rounded-full border border-zinc-300 px-3 py-1.5 text-xs font-medium text-zinc-700 shadow-sm transition hover:border-zinc-400 hover:bg-zinc-50 dark:border-white/20 dark:text-zinc-100 dark:hover:border-white/40 dark:hover:bg-zinc-900">
+                <div className="flex min-w-0 shrink-0 flex-wrap items-center gap-1.5 sm:gap-2">
+                  <label className="inline-flex cursor-pointer items-center justify-center rounded-full border border-zinc-300 px-2.5 py-1.5 text-[11px] font-medium text-zinc-700 shadow-sm transition hover:border-zinc-400 hover:bg-zinc-50 sm:px-3 sm:text-xs dark:border-white/20 dark:text-zinc-100 dark:hover:border-white/40 dark:hover:bg-zinc-900">
                     <span>파일 첨부</span>
                     <input
                       type="file"
@@ -629,7 +629,7 @@ export default function Home() {
                   <button
                     type="submit"
                     disabled={creating}
-                    className="inline-flex h-10 items-center justify-center rounded-full bg-zinc-950 px-4 text-sm font-semibold text-white shadow-sm transition hover:bg-zinc-800 disabled:opacity-50 dark:bg-white dark:text-zinc-950 dark:hover:bg-zinc-200"
+                    className="inline-flex h-9 items-center justify-center rounded-full bg-zinc-950 px-3 text-xs font-semibold text-white shadow-sm transition hover:bg-zinc-800 disabled:opacity-50 sm:h-10 sm:px-4 sm:text-sm dark:bg-white dark:text-zinc-950 dark:hover:bg-zinc-200"
                   >
                     {creating ? "저장 중…" : "저장"}
                   </button>
@@ -638,7 +638,7 @@ export default function Home() {
             </form>
           </section>
 
-          <section className="rounded-3xl border border-zinc-200 bg-white shadow-sm dark:border-white/10 dark:bg-zinc-950">
+          <section className="min-w-0 rounded-3xl border border-zinc-200 bg-white shadow-sm dark:border-white/10 dark:bg-zinc-950">
             <div className="flex flex-col gap-4 p-4 sm:flex-row sm:items-start sm:justify-between">
               <div>
                 <h2 className="text-sm font-semibold text-zinc-900 dark:text-zinc-100">메모 목록</h2>

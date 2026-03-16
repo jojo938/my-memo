@@ -55,7 +55,6 @@ function fromRow(row) {
     content: row.content ?? "",
     createdAt: row.created_at,
     updatedAt: row.updated_at ?? row.created_at,
-    mediaUrl: row.media_url ?? null,
   };
 }
 
@@ -78,14 +77,10 @@ export default function Home() {
   const [newTitle, setNewTitle] = useState("");
   const [newContent, setNewContent] = useState("");
   const [creating, setCreating] = useState(false);
-  const [newFile, setNewFile] = useState(null);
-  const [uploadingNewMedia, setUploadingNewMedia] = useState(false);
 
   const [editTitle, setEditTitle] = useState("");
   const [editContent, setEditContent] = useState("");
   const [savingEdit, setSavingEdit] = useState(false);
-  const [editFile, setEditFile] = useState(null);
-  const [uploadingEditMedia, setUploadingEditMedia] = useState(false);
   const [deletingId, setDeletingId] = useState(null);
   const [clearing, setClearing] = useState(false);
 
@@ -147,7 +142,7 @@ export default function Home() {
       setErrorMsg("");
       const { data, error } = await supabase
         .from("memos")
-        .select("id, created_at, title, content, updated_at, user_id, media_url")
+        .select("id, created_at, title, content, updated_at, user_id")
         .eq("user_id", user.id)
         .order("created_at", { ascending: false });
 
@@ -200,77 +195,6 @@ export default function Home() {
     }));
   }, [filteredMemos]);
 
-  function isVideoUrl(url) {
-    if (!url) return false;
-    const lower = url.toLowerCase().split("?")[0];
-    return lower.endsWith(".mp4");
-  }
-
-  function isGifUrl(url) {
-    if (!url) return false;
-    const lower = url.toLowerCase().split("?")[0];
-    return lower.endsWith(".gif");
-  }
-
-  async function uploadMedia(file) {
-    if (!file || !user) return null;
-    const fd = new FormData();
-    fd.append("file", file);
-    fd.append("userId", user.id);
-    fd.append("filename", file.name);
-
-    const res = await fetch("/api/upload-media", {
-      method: "POST",
-      body: fd,
-    });
-
-    if (!res.ok) {
-      const data = await res.json().catch(() => ({}));
-      throw new Error(data.error || "파일 업로드에 실패했어요.");
-    }
-
-    const json = await res.json();
-    return json.url || null;
-  }
-
-  function handleNewFileChange(e) {
-    const file = e.target.files?.[0];
-    if (!file) {
-      setNewFile(null);
-      return;
-    }
-    const type = file.type;
-    const isImage = type.startsWith("image/");
-    const isGif = isImage && type === "image/gif";
-    const isMp4 = type === "video/mp4";
-    if (!isImage && !isMp4) {
-      setErrorMsg("이미지, GIF, MP4만 첨부할 수 있어요.");
-      setNewFile(null);
-      return;
-    }
-    setErrorMsg("");
-    setNewFile(file);
-  }
-
-  function handleEditFileChange(e) {
-    const file = e.target.files?.[0];
-    if (!file) {
-      setEditFile(null);
-      return;
-    }
-    const type = file.type;
-    const isImage = type.startsWith("image/");
-    const isGif = isImage && type === "image/gif";
-    const isMp4 = type === "video/mp4";
-    if (!isImage && !isMp4) {
-      setErrorMsg("이미지, GIF, MP4만 첨부할 수 있어요.");
-      setEditFile(null);
-      return;
-    }
-    setErrorMsg("");
-    setEditFile(file);
-  }
-
   async function createMemo(e) {
     e.preventDefault();
     const title = newTitle.trim();
@@ -285,22 +209,6 @@ export default function Home() {
     const now = new Date().toISOString();
     setCreating(true);
     setErrorMsg("");
-
-    let mediaUrl = null;
-    try {
-      if (newFile) {
-        setUploadingNewMedia(true);
-        mediaUrl = await uploadMedia(newFile);
-      }
-    } catch (err) {
-      setErrorMsg(err.message || "파일 업로드에 실패했어요.");
-      setCreating(false);
-      setUploadingNewMedia(false);
-      return;
-    } finally {
-      setUploadingNewMedia(false);
-    }
-
     const { data, error } = await supabase
       .from("memos")
       .insert({
@@ -309,9 +217,8 @@ export default function Home() {
         user_id: user.id,
         created_at: now,
         updated_at: now,
-        media_url: mediaUrl,
       })
-      .select("id, created_at, title, content, updated_at, user_id, media_url")
+      .select("id, created_at, title, content, updated_at, user_id")
       .single();
 
     if (error) {
@@ -326,7 +233,6 @@ export default function Home() {
       setSelectedId(memo.id);
       setNewTitle("");
       setNewContent("");
-      setNewFile(null);
       requestAnimationFrame(() => newTitleRef.current?.focus?.());
     }
     setCreating(false);
@@ -392,32 +298,15 @@ export default function Home() {
 
     setSavingEdit(true);
     setErrorMsg("");
-
-    let mediaUrl = selectedMemo.mediaUrl ?? null;
-    try {
-      if (editFile) {
-        setUploadingEditMedia(true);
-        mediaUrl = await uploadMedia(editFile);
-      }
-    } catch (err) {
-      setErrorMsg(err.message || "파일 업로드에 실패했어요.");
-      setSavingEdit(false);
-      setUploadingEditMedia(false);
-      return;
-    } finally {
-      setUploadingEditMedia(false);
-    }
-
     const { data, error } = await supabase
       .from("memos")
       .update({
         title: title || "제목 없음",
         content,
         updated_at: now,
-        media_url: mediaUrl,
       })
       .eq("id", selectedMemo.id)
-      .select("id, created_at, title, content, updated_at, media_url")
+      .select("id, created_at, title, content, updated_at")
       .single();
 
     if (error) {
@@ -431,7 +320,6 @@ export default function Home() {
       setMemos((prev) => prev.map((m) => (m.id === updated.id ? updated : m)));
     }
     setSavingEdit(false);
-    setEditFile(null);
   }
 
   async function clearAll() {
@@ -594,40 +482,16 @@ export default function Home() {
                 rows={8}
                 className="w-full resize-none rounded-2xl border border-zinc-200 bg-white px-4 py-3 text-sm leading-6 outline-none transition placeholder:text-zinc-400 focus:border-zinc-300 dark:border-white/10 dark:bg-zinc-950 dark:placeholder:text-zinc-500 dark:focus:border-white/20"
               />
-              <div className="flex flex-col gap-1 text-xs">
-                <label className="font-semibold text-zinc-700 dark:text-zinc-300">
-                  파일 첨부 (이미지 / GIF / MP4)
-                </label>
-                <input
-                  type="file"
-                  accept="image/*,video/mp4"
-                  onChange={handleNewFileChange}
-                  className="block w-full text-xs text-zinc-600 file:mr-3 file:rounded-full file:border file:border-zinc-200 file:bg-white file:px-3 file:py-1.5 file:text-xs file:font-medium file:text-zinc-700 hover:file:bg-zinc-50 dark:text-zinc-300 dark:file:border-white/10 dark:file:bg-zinc-900 dark:file:text-zinc-100 dark:hover:file:bg-zinc-800"
-                />
-                {newFile ? (
-                  <span className="text-[11px] text-zinc-500 dark:text-zinc-400">
-                    선택된 파일: {newFile.name}
-                  </span>
-                ) : (
-                  <span className="text-[11px] text-zinc-500 dark:text-zinc-500">
-                    최대 한 개까지 첨부할 수 있어요. 이미지는 최대 1200px, 품질 80%로 리사이징돼요.
-                  </span>
-                )}
-              </div>
               <div className="flex items-center justify-between gap-2">
                 <div className="text-xs text-zinc-500 dark:text-zinc-400">
-                  {loading
-                    ? "상태: 불러오는 중"
-                    : uploadingNewMedia
-                      ? "파일 업로드 중…"
-                      : "저장: Supabase / memo-media"}
+                  {loading ? "상태: 불러오는 중" : "저장: Supabase"}
                 </div>
                 <button
                   type="submit"
-                  disabled={creating || uploadingNewMedia}
+                  disabled={creating}
                   className="inline-flex h-10 items-center justify-center rounded-full bg-zinc-950 px-4 text-sm font-semibold text-white shadow-sm transition hover:bg-zinc-800 disabled:opacity-50 dark:bg-white dark:text-zinc-950 dark:hover:bg-zinc-200"
                 >
-                  {creating || uploadingNewMedia ? "저장 중…" : "저장"}
+                  {creating ? "저장 중…" : "저장"}
                 </button>
               </div>
             </form>
@@ -672,7 +536,6 @@ export default function Home() {
                         <div className="flex flex-col gap-2">
                           {g.memos.map((memo) => {
                             const active = memo.id === selectedId;
-                            const hasMedia = !!memo.mediaUrl;
                             return (
                               <button
                                 key={memo.id}
@@ -708,27 +571,6 @@ export default function Home() {
                                       minute: "2-digit",
                                     }).format(new Date(memo.createdAt))}
                                   </div>
-                                  {hasMedia ? (
-                                    <div className="mt-2">
-                                      {isVideoUrl(memo.mediaUrl) ? (
-                                        <div className="overflow-hidden rounded-xl">
-                                          <video
-                                            src={memo.mediaUrl}
-                                            className="h-20 w-full max-w-full rounded-xl object-cover"
-                                            muted
-                                          />
-                                        </div>
-                                      ) : (
-                                        <div className="overflow-hidden rounded-xl">
-                                          <img
-                                            src={memo.mediaUrl}
-                                            alt=""
-                                            className="h-20 w-full max-w-full rounded-xl object-cover"
-                                          />
-                                        </div>
-                                      )}
-                                    </div>
-                                  ) : null}
                                 </div>
                               </button>
                             );
@@ -783,48 +625,6 @@ export default function Home() {
                       />
                     </div>
 
-                    <div className="grid gap-2">
-                      <label className="text-xs font-semibold text-zinc-600 dark:text-zinc-400">첨부 파일</label>
-                      <input
-                        type="file"
-                        accept="image/*,video/mp4"
-                        onChange={handleEditFileChange}
-                        className="block w-full text-xs text-zinc-600 file:mr-3 file:rounded-full file:border file:border-zinc-200 file:bg-white file:px-3 file:py-1.5 file:text-xs file:font-medium file:text-zinc-700 hover:file:bg-zinc-50 dark:text-zinc-300 dark:file:border-white/10 dark:file:bg-zinc-900 dark:file:text-zinc-100 dark:hover:file:bg-zinc-800"
-                      />
-                      <div className="flex flex-col gap-1">
-                        {editFile ? (
-                          <span className="text-[11px] text-zinc-500 dark:text-zinc-400">
-                            새 파일 선택됨: {editFile.name}
-                          </span>
-                        ) : selectedMemo.mediaUrl ? (
-                          <span className="text-[11px] text-zinc-500 dark:text-zinc-400">
-                            기존 파일이 연결되어 있어요. 새 파일을 선택하면 교체돼요.
-                          </span>
-                        ) : (
-                          <span className="text-[11px] text-zinc-500 dark:text-zinc-500">
-                            이미지/GIF/MP4를 첨부해 메모에 함께 보여줄 수 있어요.
-                          </span>
-                        )}
-                        {selectedMemo.mediaUrl ? (
-                          <div className="mt-1">
-                            {isVideoUrl(selectedMemo.mediaUrl) ? (
-                              <video
-                                src={selectedMemo.mediaUrl}
-                                controls
-                                className="h-auto max-h-64 w-full max-w-full rounded-2xl object-contain"
-                              />
-                            ) : (
-                              <img
-                                src={selectedMemo.mediaUrl}
-                                alt=""
-                                className="h-auto max-h-64 w-full max-w-full rounded-2xl object-contain"
-                              />
-                            )}
-                          </div>
-                        ) : null}
-                      </div>
-                    </div>
-
                     <div className="flex flex-wrap items-center justify-between gap-2 pt-1">
                       <div className="text-xs text-zinc-600 dark:text-zinc-400">
                         <div>
@@ -837,10 +637,10 @@ export default function Home() {
                       <button
                         type="button"
                         onClick={saveEdit}
-                        disabled={savingEdit || uploadingEditMedia}
+                        disabled={savingEdit}
                         className="inline-flex h-10 items-center justify-center rounded-full bg-zinc-950 px-4 text-sm font-semibold text-white shadow-sm transition hover:bg-zinc-800 disabled:opacity-50 dark:bg-white dark:text-zinc-950 dark:hover:bg-zinc-200"
                       >
-                        {savingEdit || uploadingEditMedia ? "저장 중…" : "수정 저장"}
+                        {savingEdit ? "저장 중…" : "수정 저장"}
                       </button>
                     </div>
                   </div>

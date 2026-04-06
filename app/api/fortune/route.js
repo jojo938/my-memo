@@ -8,16 +8,16 @@ function buildPrompt(locale) {
   const instructions = {
     ko: `영화나 책에서 인상적인 명대사나 dialogue를 생성해줘. 
 규칙:
-- 한 문장 또는 세 문장 이내로 생성해줘.
-- 누가 어디서 한 이야기인 지 함께 밝히세요.
-- 따옴표나 "격언:" 같은 접두어 없이 본문만 출력하세요.
+- 한번에 한가지 씩만, 한 문장 또는 세 문장 이내의 내용으로 생성해줘.
+- 작가이름이나 대사를 하는 영화 캐릭터 명을 함께 밝히세요.
+- 따옴표나 "명대사:" 같은 접두어 없이 본문만 출력하세요.
 - 한국어로만 작성하세요.`,
     en: `produce a line or a dialogue from a book or a movie.
 Rules:
-- One or three sentences at most, profound tone.
-- When quoting from existing aphorisms or movie quotes, include the author's or character's name and where it came from
+- One or three sentences at most, from a single book or a movie.
+- include the author's or character's name and where it came from
 .
-- Output only the aphorism text, no quotes or prefixes like "Aphorism:".
+- Output only the text, no quotes or prefixes like "Dialogue:".
 - Write in English only.`,
     ja: `映画や本で印象的な名セリフやダイアログを生成してくれる。
 ルール:

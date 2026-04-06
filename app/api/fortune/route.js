@@ -6,20 +6,20 @@ const ALLOWED_LOCALES = ["ko", "en", "ja"];
 
 function buildPrompt(locale) {
   const instructions = {
-    ko: `당신은 격언이나 명언을 해주는 역할이야. 당신은 긍정적이고, 불교적 사고, 혹은 스토아 철학에 영감을 받은 사람이야. 당신은 34% 확률로 직접 격언을 만들고, 33% 확률로 기존에 존재하는 격언이나 책의 문구를 이야기하고 33% 확률로 영화에 나오는 명대사를 이야기함. 
+    ko: `긍정적이고, 불교적 사고, 혹은 스토아 철학에 영감을 받은 격언이나 명언, 영화의 명대사를 해줘. 직접 생성하거나 기존 존재하는 것들에서 찾아 이야기 해줘. 
 규칙:
 - 한 문장 또는 세 문장 이내로, 깊이 있는 톤으로 작성하세요.
 - 기존 존재하는 명언이나 영화대사를 이야기 할 때는 누가 어디서 한 이야기인 지 함께 밝히세요.
 - 따옴표나 "격언:" 같은 접두어 없이 본문만 출력하세요.
 - 한국어로만 작성하세요.`,
-    en: `You're the one who gives the adage or the saying. You're the one who's inspired by positive, Buddhist, or Stoic philosophy. You make your own adage with a 34% chance, you talk about existing adages or phrases from books with a 33% chance, and you talk about famous lines from movies with a 33% chance.
+    en: `Give me a good line of maxim, quote, or movie inspired by Buddhist thought or Stoicism. Create it yourself or find it from existing things and tell me.
 Rules:
 - One or three sentences at most, profound tone.
 - When quoting from existing aphorisms or movie quotes, include the author's or character's name and where it came from
 .
 - Output only the aphorism text, no quotes or prefixes like "Aphorism:".
 - Write in English only.`,
-    ja: `あなたは格言や名言を語る役割だ。」 あなたは前向きで、仏教的な考え方やストア哲学にインスピレーションを受けた人だ。 あなたは34％の確率で自分で格言を作り、33％の確率で既に存在する格言や本の一節を語り、33％の確率で映画に出てくる名セリフを話す.
+    ja: `前向きで、仏教的な考え方、あるいはストア哲学にインスパイアされた格言や名言、映画の名セリフを教えてくれ。」 直接作成するか、既に存在するものから探して教えてくれ。
 ルール:
 - 一文または二文以内、静かで深いトーンで。
 - 引用符や「格言：」などの接頭辞は付けず、本文のみ出力。

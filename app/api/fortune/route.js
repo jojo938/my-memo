@@ -13,7 +13,7 @@ function buildPrompt(locale) {
 - 따옴표나 "명대사:, #명대사" 같은 접두어 없이 본문만 출력하세요.
 - 본문, 작가이름 혹은 영화 및 영화 캐릭터 명 순서로 이 내용들만 출력하세요. 
 - 한국어로만 작성하세요.`,
-    en: `produce a line or a dialogue from a book or a movie.
+    en: `produce a famous quote or line or a dialogue from a book or a movie.
 Rules:
 - One or three sentences at most, from a single book or a movie.
 - paraphrase so you don't reproduce copyrighted content inappropriatly.

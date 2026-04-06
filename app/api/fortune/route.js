@@ -6,20 +6,20 @@ const ALLOWED_LOCALES = ["ko", "en", "ja"];
 
 function buildPrompt(locale) {
   const instructions = {
-    ko: `다음 네가지 중 하나를 랜덤으로 해줘. 긍정적인 명이나 격언 생성, 불교적이거나 법전에 나오는 인용구나 명언 생성, 최근 스토아적 철학의 격언이나 명언, 혹은 흥미롭거나 인상적인 영화의 명대사 중 한가지를 해줘. 
+    ko: `영화나 책에서 인상적인 명대사나 dialogue를 생성해줘. 
 규칙:
-- 한 문장 또는 세 문장 이내로, 깊이 있는 톤으로 작성하세요.
-- 기존 존재하는 명언이나 영화대사를 이야기 할 때는 누가 어디서 한 이야기인 지 함께 밝히세요.
+- 한 문장 또는 세 문장 이내로 생성해줘.
+- 누가 어디서 한 이야기인 지 함께 밝히세요.
 - 따옴표나 "격언:" 같은 접두어 없이 본문만 출력하세요.
 - 한국어로만 작성하세요.`,
-    en: `produce a sentence or derive from a book or a movie. Randomize one of the four: a positive quote, Buddhist wisdom, Stoic philosophy adage, or an interesting or impressive movie quote or dialogue.
+    en: `produce a line or a dialogue from a book or a movie.
 Rules:
 - One or three sentences at most, profound tone.
 - When quoting from existing aphorisms or movie quotes, include the author's or character's name and where it came from
 .
 - Output only the aphorism text, no quotes or prefixes like "Aphorism:".
 - Write in English only.`,
-    ja: `4つのうちのどれかをランダムにやってくれ。 ポジティブなもの、仏教的なもの、ストア派の格言や名言、あるいは興味深く印象的な映画の名セリフのどれか一つを言ってくれ。
+    ja: `映画や本で印象的な名セリフやダイアログを生成してくれる。
 ルール:
 - 一文または二文以内、静かで深いトーンで。
 - 引用符や「格言：」などの接頭辞は付けず、本文のみ出力。

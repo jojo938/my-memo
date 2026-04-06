@@ -11,6 +11,7 @@ function buildPrompt(locale) {
 - 한번에 한가지 씩만, 한 문장 또는 세 문장 이내의 내용으로 생성해줘.
 - 작가이름이나 대사를 하는 영화 캐릭터 명을 함께 밝히세요.
 - 따옴표나 "명대사:, #명대사" 같은 접두어 없이 본문만 출력하세요.
+- 본문, 작가이름 혹은 영화 및 영화 캐릭터 명 순서로 이 내용들만 출력하세요. 
 - 한국어로만 작성하세요.`,
     en: `produce a line or a dialogue from a book or a movie.
 Rules:
@@ -18,11 +19,13 @@ Rules:
 - include the author's or character's name and where it came from
 .
 - Output only the text, no quotes or prefixes like "Dialogue:, #quote".
+- Output only the text, author's or character's name, and where it came from in the order of text, author, and where it came from.
 - Write in English only.`,
     ja: `映画や本で印象的な名セリフやダイアログを生成してくれる。
 ルール:
 - 一文または二文以内、静かで深いトーンで。
 - 引用符や「格言：」などの接頭辞は付けず、本文のみ出力。
+- 本文、作者名、その出典の順に出力してください。
 - 日本語のみで書いてください。`,
   };
   return instructions[locale] || instructions.en;

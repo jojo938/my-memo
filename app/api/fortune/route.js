@@ -16,7 +16,7 @@ function buildPrompt(locale) {
     en: `produce a line or a dialogue from a book or a movie.
 Rules:
 - One or three sentences at most, from a single book or a movie.
-- refrain from reproducing copyrighted content inappropriatly.
+- paraphrase so you don't reproduce copyrighted content inappropriatly.
 - include the author's or character's name and where it came from
 .
 - Output only the text, no quotes or prefixes like "Dialogue:, #quote".

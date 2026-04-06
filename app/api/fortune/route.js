@@ -10,14 +10,14 @@ function buildPrompt(locale) {
 규칙:
 - 한번에 한가지 씩만, 한 문장 또는 세 문장 이내의 내용으로 생성해줘.
 - 작가이름이나 대사를 하는 영화 캐릭터 명을 함께 밝히세요.
-- 따옴표나 "명대사:" 같은 접두어 없이 본문만 출력하세요.
+- 따옴표나 "명대사:, #명대사" 같은 접두어 없이 본문만 출력하세요.
 - 한국어로만 작성하세요.`,
     en: `produce a line or a dialogue from a book or a movie.
 Rules:
 - One or three sentences at most, from a single book or a movie.
 - include the author's or character's name and where it came from
 .
-- Output only the text, no quotes or prefixes like "Dialogue:".
+- Output only the text, no quotes or prefixes like "Dialogue:, #quote".
 - Write in English only.`,
     ja: `映画や本で印象的な名セリフやダイアログを生成してくれる。
 ルール:

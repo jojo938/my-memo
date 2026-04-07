@@ -9,7 +9,7 @@ export default function Home() {
           <p className="mt-2 text-sm text-zinc-600 dark:text-zinc-400">원하는 기능을 선택하세요.</p>
         </header>
 
-        <div className="grid gap-4 sm:grid-cols-2 sm:gap-6">
+        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 sm:gap-6">
           <Link
             href="/memo"
             className="group flex flex-col rounded-3xl border border-zinc-200 bg-white p-6 shadow-sm transition hover:border-zinc-300 hover:shadow-md dark:border-white/10 dark:bg-zinc-950 dark:hover:border-white/20"
@@ -30,6 +30,19 @@ export default function Home() {
           >
             <span className="text-lg font-semibold text-zinc-900 dark:text-zinc-50">포춘 쿠키</span>
             <span className="mt-2 text-sm text-zinc-600 dark:text-zinc-400">오늘의 포춘쿠키 메세지를 확인하세요.</span>
+            <span className="mt-4 text-sm font-medium text-zinc-950 group-hover:underline dark:text-zinc-50">
+              들어가기 →
+            </span>
+          </Link>
+
+          <Link
+            href="/poem"
+            className="group flex flex-col rounded-3xl border border-zinc-200 bg-white p-6 shadow-sm transition hover:border-zinc-300 hover:shadow-md dark:border-white/10 dark:bg-zinc-950 dark:hover:border-white/20 sm:col-span-2 lg:col-span-1"
+          >
+            <span className="text-lg font-semibold text-zinc-900 dark:text-zinc-50">마음의 울림</span>
+            <span className="mt-2 text-sm text-zinc-600 dark:text-zinc-400">
+              키워드로 마음에 울리는 시를 만들어 보세요.
+            </span>
             <span className="mt-4 text-sm font-medium text-zinc-950 group-hover:underline dark:text-zinc-50">
               들어가기 →
             </span>

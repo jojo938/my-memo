@@ -5,8 +5,8 @@ export default function Home() {
     <div className="min-h-screen overflow-x-hidden bg-zinc-50 font-sans text-zinc-950 dark:bg-black dark:text-zinc-50">
       <div className="mx-auto flex w-full max-w-3xl flex-col gap-10 px-4 py-16 sm:px-6 lg:px-8">
         <header className="text-center">
-          <h1 className="text-2xl font-semibold tracking-tight sm:text-3xl">환영합니다</h1>
-          <p className="mt-2 text-sm text-zinc-600 dark:text-zinc-400">원하는 기능을 선택하세요.</p>
+          <h1 className="text-2xl font-semibold tracking-tight sm:text-3xl">오늘도 안녕</h1>
+          <p className="mt-2 text-sm text-zinc-600 dark:text-zinc-400">오늘도 잠시 쉬었다 가</p>
         </header>
 
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 sm:gap-6">

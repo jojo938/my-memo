@@ -734,7 +734,7 @@ export default function Home() {
                     메모를 선택하면 여기에서 수정/삭제할 수 있어요.
                   </div>
                 ) : (
-                  <div className="flex flex-1 flex-col gap-3">
+                  <div className="flex w-full flex-col gap-3">
                     <div className="flex items-start justify-between gap-2">
                       <div className="min-w-0">
                         <div className="text-xs font-semibold text-zinc-600 dark:text-zinc-400">선택된 메모</div>
@@ -761,13 +761,13 @@ export default function Home() {
                       />
                     </div>
 
-                    <div className="grid flex-1 gap-2">
+                    <div className="grid gap-2">
                       <label className="text-xs font-semibold text-zinc-600 dark:text-zinc-400">내용</label>
                       <textarea
                         value={editContent}
                         onChange={(e) => setEditContent(e.target.value)}
                         rows={10}
-                        className="w-full flex-1 resize-none rounded-2xl border border-zinc-200 bg-white px-4 py-3 text-sm leading-6 outline-none transition focus:border-zinc-300 dark:border-white/10 dark:bg-zinc-950 dark:focus:border-white/20"
+                        className="w-full resize-none rounded-2xl border border-zinc-200 bg-white px-4 py-3 text-sm leading-6 outline-none transition focus:border-zinc-300 dark:border-white/10 dark:bg-zinc-950 dark:focus:border-white/20"
                       />
                       {selectedMemo.mediaUrl ? (
                         <div className="mt-3">

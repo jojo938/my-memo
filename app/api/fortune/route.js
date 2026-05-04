@@ -6,9 +6,8 @@ const ALLOWED_LOCALES = ["ko", "en", "ja"];
 
 function buildPrompt(locale) {
   const instructions = {
-    ko: `영화나 책이나 철학자에서 인상적인 명대사나 dialogue를 생성해줘. 
+    ko: `영화나 책이나 철학자에서(각각 33.3% 확률로 선정) 인상적인 명대사나 dialogue를 생성해줘. 
 규칙:
-- 한번에 한가지 씩만, 한 문장 또는 세 문장 이내의 내용으로 생성해줘.
 - 유명하지 않은 책이나 영화이나 철학자에서도 유명한 명대사나 대사를 생성해줘.
 - 작가이름이나 대사를 하는 영화 캐릭터 명을 함께 밝히세요.
 - 따옴표나 "명대사:, #명대사" 같은 접두어 없이 본문만 출력하세요.
@@ -16,17 +15,15 @@ function buildPrompt(locale) {
 - 한국어로만 작성하세요.`,
     en: `produce a famous quote or line or a dialogue from a book, a movie, or a philosopher.
 Rules:
-- One or three sentences at most, from a single book or a movie or a philosopher.
-- Try to generate a quote or line or a dialogue from a less well known book or a movie.
+- Try to generate a quote or line or a dialogue(33.3% probability) from a less well known book or a movie.
 - paraphrase so you don't reproduce copyrighted content inappropriatly.
 - include the author's or character's name and where it came from
 .
 - Output only the text, no quotes or prefixes like "Dialogue:, #quote".
 - Output only the text, author's or character's name, and where it came from in the order of text, author, and where it came from.
 - Write in English only.`,
-    ja: `映画や本や哲学者で印象的な名セリフやダイアログを生成してくれる。
+    ja: `映画や本や哲学者で(33.3% probability)印象的な名セリフやダイアログを生成してくれる。
 ルール:
-- 一文または二文以内、静かで深いトーンで。
 - 引用符や「格言：」などの接頭辞は付けず、本文のみ出力。
 - 本文、作者名、その出典の順に出力してください。
 - 日本語のみで書いてください。`,

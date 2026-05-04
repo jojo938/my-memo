@@ -1,0 +1,15 @@
+
+
+OAuth 클라이언트 생성됨
+Google 인증 플랫폼의 클라이언트 탭에서 언제든지 클라이언트 ID에 액세스할 수 있습니다.
+
+OAuth 액세스는 OAuth 동의 화면에 나열된 테스트 사용자 로 제한됩니다.
+클라이언트 ID
+117119592194-0ipo8o8apk0kfnsncrfqo8594u3b6lsp.apps.googleusercontent.com
+이 대화상자를 닫으면 더 이상 클라이언트 보안 비밀번호를 보거나 다운로드할 수 없습니다. 아래 정보를 복사하거나 다운로드하여 안전하게 보관해야 합니다.
+클라이언트 보안 비밀번호
+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
+생성일
+2026년 3월 13일 PM 1시 59분 15초 GMT+9
+상태
+사용 설정됨
